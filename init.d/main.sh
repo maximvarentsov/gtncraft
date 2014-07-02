@@ -54,7 +54,6 @@ start() {
   then
     echo "${SCREENAME} is already running!"
   else
-    echo "Starting ${SCREENAME}..."
     as_user "cd ${SERVER_DIR} && screen -h ${HISTORY} -dmS ${SCREENAME} ${INVOCATION}"
     if server_running
     then
@@ -120,7 +119,7 @@ cmd() {
     pre_log_len=`wc -l "${SERVER_DIR}/logs/latest.log" | awk '{print $1}'`
     as_user "screen -p 0 -S ${SCREENAME} -X eval 'stuff \"${command}\"\015'"
     sleep .1
-    X=`wc -l ${logfile} \| awk '{print $1}'`-${pre_log_len}
+    X=`wc -l ${logfile} | awk '{print $1}'`-${pre_log_len}
     tail -n $[X] ${logfile}
   else
     echo "${SCREENAME} was not running. Not able to run command."
