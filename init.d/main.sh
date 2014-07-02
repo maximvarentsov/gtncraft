@@ -12,12 +12,12 @@
 # Description:    Starts the minecraft server
 ### END INIT INFO
 
-SERVICE='spigot.jar'
+SERVER='spigot.jar'
 USERNAME='minecraft'
 SCREENAME="main"
 WORLD='world'
-MCPATH="/home/minecraft/${SCREENAME}"
-BACKUPPATH="/home/minecraft/backups/${SCREENAME}"
+SERVER_DIR="/home/minecraft/${SCREENAME}"
+BACKUP_DIR="/home/minecraft/backups/${SCREENAME}"
 MAXHEAP=24768
 MINHEAP=12500
 HISTORY=1024
@@ -30,7 +30,7 @@ INVOCATION="/opt/jdk1.8.0_05/bin/java \
 -XX:+DisableExplicitGC \
 -XX:+CMSClassUnloadingEnabled -XX:+CMSPermGenSweepingEnabled \
 -Dfile.encoding=UTF-8 \
--jar ${SERVICE}"
+-jar ${SERVER}"
 
 as_user() {
   if [ ${ME} == ${USERNAME} ] ; then
@@ -41,7 +41,7 @@ as_user() {
 }
 
 server_running() {
-  if ps ax | grep SCREEN | grep ${SERVICE} | grep ${SCREENAME} > /dev/null
+  if ps ax | grep SCREEN | grep ${SERVER} | grep ${SCREENAME} > /dev/null
   then
     return 0
   else
@@ -55,7 +55,7 @@ start() {
     echo "${SCREENAME} is already running!"
   else
     echo "Starting ${SCREENAME}..."
-    as_user "cd ${MCPATH} && screen -h ${HISTORY} -dmS ${SCREENAME} ${INVOCATION}"
+    as_user "cd ${SERVER_DIR} && screen -h ${HISTORY} -dmS ${SCREENAME} ${INVOCATION}"
     if server_running
     then
       echo "Server ${SCREENAME} is now running."
@@ -68,8 +68,8 @@ start() {
 saveoff() {
   if server_running
   then
-    command save-off
-    command save-all
+    cmd save-off
+    cmd save-all
     sync
     sleep 10
   else
@@ -80,7 +80,7 @@ saveoff() {
 saveon() {
   if server_running
   then
-    command save-on
+    cmd save-on
   else
     echo "${SCREENAME} is not running. Not resuming saves."
   fi
@@ -90,10 +90,10 @@ stop() {
   if server_running
   then
     echo "Stopping ${SCREENAME}"
-    command "say Сервер будет перезапушен!"
-    command save-all
+    cmd "say Сервер будет перезапушен!"
+    cmd save-all
     sleep 10
-    command stop
+    cmd stop
     sleep 7
   else
     echo "${SCREENAME} was not running."
@@ -103,23 +103,25 @@ stop() {
 backup() {
    saveoff
    NOW=`date "+%Y-%m-%d_%Hh%M"`
-   BACKUP_FILE="${BACKUPPATH}/${WORLD}_${NOW}.tar"
+   BACKUP_FILE="${BACKUP_DIR}/${WORLD}_${NOW}.tar"
    echo "Backing up minecraft world..."
-   as_user "tar -C \"${MCPATH}\" -cf \"${BACKUP_FILE}\" ${WORLD}"
+   as_user "tar -C \"${SERVER_DIR}\" -cf \"${BACKUP_FILE}\" ${WORLD}"
    saveon
    echo "Compressing backup..."
    as_user "gzip -f \"${BACKUP_FILE}\""
    echo "Done."
 }
 
-command() {
+cmd() {
   command="$1";
+  logfile="${SERVER_DIR}/logs/latest.log"
   if server_running
   then
-    pre_log_len=`wc -l "$MCPATH/logs/latest.log" | awk '{print $1}'`
+    pre_log_len=`wc -l "${SERVER_DIR}/logs/latest.log" | awk '{print $1}'`
     as_user "screen -p 0 -S ${SCREENAME} -X eval 'stuff \"${command}\"\015'"
     sleep .1
-    tail -n $[`wc -l "$MCPATH/logs/latest.log" | awk '{print $1}'`-$pre_log_len] "$MCPATH/logs/latest.log"
+    X=`wc -l ${logfile} \| awk '{print $1}'`-${pre_log_len}
+    tail -n $[X] ${logfile}
   else
     echo "${SCREENAME} was not running. Not able to run command."
   fi
@@ -150,7 +152,7 @@ case "$1" in
   command)
     if [ $# -gt 1 ]; then
       shift
-      command "$*"
+      cmd "$*"
     else
       echo "Must specify server command (try 'help'?)"
     fi
